@@ -14,11 +14,57 @@
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.12.0</version>
+        </dependency>
 
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-controls</artifactId>
+            <version>18.0.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.javarush</groupId>
+            <artifactId>desktop-game-engine</artifactId>
+            <version>1.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <version>5.8.2</version>
+        </dependency>
     </dependencies>
 
     <build>
         <plugins>
+
+            <!-- Плагин для установки JAR из папки lib в локальный репозиторий -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-install-plugin</artifactId>
+                <version>3.1.1</version>
+                <executions>
+                    <execution>
+                        <id>install-desktop-game-engine</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <file>${project.basedir}/lib/desktop-game-engine-1.0.jar</file>
+                            <groupId>com.javarush</groupId>
+                            <artifactId>desktop-game-engine</artifactId>
+                            <version>1.0</version>
+                            <packaging>jar</packaging>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
             <!-- Usual compilation -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -38,6 +84,80 @@
                     <mainClass>com.javarush.games.racer.RacerGame</mainClass>
                 </configuration>
             </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.6.1</version>
+                <executions>
+                    <execution>
+                        <id>copy-dependencies</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.basedir}/lib</outputDirectory>
+                            <includeScope>compile</includeScope>
+                            <stripVersion>false</stripVersion>
+                            <overWriteReleases>false</overWriteReleases>
+                            <overWriteSnapshots>false</overWriteSnapshots>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>build-fat-jar</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <property name="jar.dir" value="target/jar"/>
+                                <property name="classes.dir" value="target/classes"/>
+                                <property name="lib.dir" value="lib"/>
+
+                                <mkdir dir="${jar.dir}"/>
+                                <copy todir="${jar.dir}">
+                                    <fileset dir="${classes.dir}"/>
+                                </copy>
+                                <copy file="lib/jarinjarloader.jar" todir="${jar.dir}"/>
+
+                                <jar destfile="target/game.jar"
+                                     basedir="${jar.dir}">
+                                    <manifest>
+                                        <attribute name="Main-Class"
+                                                   value="org.eclipse.jdt.internal.jarinjarloader.JarRsrcLoader"/>
+                                        <attribute name="Rsrc-Main-Class" value="com.javarush.games.racer.RacerGame"/>
+                                        <attribute name="Class-Path" value="."/>
+                                        <attribute name="Rsrc-Class-Path" value="@rsrc-dependencies"/>
+                                    </manifest>
+                                </jar>
+
+                                <!-- Копируем зависимости в target/lib -->
+                                <copy todir="target/lib">
+                                    <fileset dir="${lib.dir}"/>
+                                </copy>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.apache.ant</groupId>
+                        <artifactId>ant</artifactId>
+                        <version>1.10.13</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+
         </plugins>
     </build>
 
